@@ -18,6 +18,11 @@
  * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
  **/
 
+/**
+ * Modified by Estevão Rocha <estevao.bom@gmail.com>
+ * 2018/10/29 
+ **/
+
 package org.godotengine.godot;
 
 import android.app.Activity;
@@ -116,7 +121,7 @@ public class FireBase extends Godot.SingletonBase {
 			//Storage--
 
 			//Firestore++
-			"load_document", "set_document", "add_document", "set_listener", "remove_listener"
+			"load_document", "set_document", "add_document", "set_listener", "remove_listener, get_document"
 			//Firestore--
 		});
 
@@ -772,7 +777,7 @@ public class FireBase extends Godot.SingletonBase {
 			}
 		});
 	}
-    
+
     public void set_listener(final String p_col_name, final String p_doc_name) {
         activity.runOnUiThread(new Runnable() {
 			public void run() {
@@ -788,6 +793,14 @@ public class FireBase extends Godot.SingletonBase {
 			}
 		});
     }
+
+    public void get_document(final String p_name, final String p_doc_name) {
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				Firestore.getInstance(activity).getDocument(p_name, p_doc_name);
+			}
+		});
+	}
     
 	//Firestore--
 

@@ -18,6 +18,11 @@
  * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
  **/
 
+/**
+ * Modified by Estevão Rocha <estevao.bom@gmail.com>
+ * 2018/10/29 
+ **/
+
 package org.godotengine.godot;
 
 import android.app.Activity;
@@ -103,6 +108,34 @@ public class Firestore {
 						Utils.d("Data: " + jobject.toString());
 						Utils.callScriptFunc(
 						"Firestore", "Documents", jobject.toString());
+					} catch (JSONException e) {
+						Utils.d("JSON Exception: " + e.toString());
+					}
+				} else {
+					Utils.w("Error getting documents: " + task.getException());
+				}
+			}
+		});
+	} 
+
+	public void getDocument (final String p_name, final String p_doc_name) {
+		Utils.d("Firestore::LoadData");
+
+		db.collection(p_name).document(p_doc_name).get()
+		.addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+			@Override
+			public void onComplete(@NonNull Task<QuerySnapshot> task) {
+				if (task.isSuccessful()) {
+					JSONObject jobject = new JSONObject();
+
+					try {
+						for (DocumentSnapshot doc : task.getResult()) {
+							jobject.put(doc.getData());
+						}
+
+						Utils.d("Data: " + jobject.toString());
+						Utils.callScriptFunc(
+						"Firestore", "QueryDocument", jobject.toString());
 					} catch (JSONException e) {
 						Utils.d("JSON Exception: " + e.toString());
 					}
