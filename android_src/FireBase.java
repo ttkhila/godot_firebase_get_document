@@ -121,7 +121,7 @@ public class FireBase extends Godot.SingletonBase {
 			//Storage--
 
 			//Firestore++
-			"load_document", "set_document", "add_document", "set_listener", "remove_listener, get_document"
+			"load_document", "set_document", "add_document", "set_listener", "remove_listener", "get_document"
 			//Firestore--
 		});
 

@@ -122,16 +122,15 @@ public class Firestore {
 		Utils.d("Firestore::LoadData");
 
 		db.collection(p_name).document(p_doc_name).get()
-		.addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+		.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
 			@Override
-			public void onComplete(@NonNull Task<QuerySnapshot> task) {
+			public void onComplete(@NonNull Task<DocumentSnapshot> task) {
 				if (task.isSuccessful()) {
 					JSONObject jobject = new JSONObject();
 
 					try {
-						for (DocumentSnapshot doc : task.getResult()) {
-							jobject.put(doc.getData());
-						}
+						DocumentSnapshot document = task.getResult();
+						jobject.put(document.getId(), document.getData());
 
 						Utils.d("Data: " + jobject.toString());
 						Utils.callScriptFunc(
