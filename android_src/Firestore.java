@@ -126,18 +126,16 @@ public class Firestore {
 			@Override
 			public void onComplete(@NonNull Task<DocumentSnapshot> task) {
 				if (task.isSuccessful()) {
-					JSONObject jobject = new JSONObject();
+					DocumentSnapshot document = task.getResult();
 
-					try {
-						DocumentSnapshot document = task.getResult();
-						jobject.put(document.getId(), document.getData());
-
-						Utils.d("Data: " + jobject.toString());
-						Utils.callScriptFunc(
-						"Firestore", "QueryDocument", jobject.toString());
-					} catch (JSONException e) {
-						Utils.d("JSON Exception: " + e.toString());
-					}
+					if (document != null && document.exists()) {
+	                	Utils.d("Data: " + document.getData());
+	                	Utils.callScriptFunc("Firestore", "QueryDocument", new JSONObject(document.getData()).toString());
+	            	} else {
+	                	Utils.d("No such document");
+	                	Utils.callScriptFunc("Firestore", "SnapshotData", "");
+	           		}	
+					
 				} else {
 					Utils.w("Error getting documents: " + task.getException());
 				}
@@ -182,7 +180,6 @@ public class Firestore {
 				Utils.callScriptFunc("Firestore", "DocumentAdded", false);
 			}
 		});
-
 	}
     
     public void setListener(final String p_col_name, final String p_doc_name){
