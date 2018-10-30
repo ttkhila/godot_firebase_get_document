@@ -129,13 +129,13 @@ public class Firestore {
 					DocumentSnapshot document = task.getResult();
 
 					if (document != null && document.exists()) {
-	                	Utils.d("Data: " + document.getData());
-	                	Utils.callScriptFunc("Firestore", "QueryDocument", new JSONObject(document.getData()).toString());
-	            	} else {
-	                	Utils.d("No such document");
-	                	Utils.callScriptFunc("Firestore", "SnapshotData", "");
-	           		}	
-					
+						Utils.d("Data: " + document.getData());
+						Utils.callScriptFunc("Firestore", "QueryDocument", new JSONObject(document.getData()).toString());
+					} else {
+						Utils.d("No such document");
+						Utils.callScriptFunc("Firestore", "SnapshotData", "");
+					}	
+		
 				} else {
 					Utils.w("Error getting documents: " + task.getException());
 				}
