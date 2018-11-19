@@ -14,10 +14,6 @@
  * limitations under the License.
  **/
 
-/**
- * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
- **/
-
 package org.godotengine.godot;
 
 import android.app.Activity;

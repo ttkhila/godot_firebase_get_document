@@ -98,13 +98,13 @@ public class FacebookSignIn {
 						if (usr.getProviderId().equals("facebook.com")) {
 							Utils.d("FB:AuthStateChanged:signed_in:"+
 							user.getUid());
-							successLogin(user);
+							successSignin(user);
 						}
 					}
 				} else {
 					// User is signed out
 					Utils.d("FB:onAuthStateChanged:signed_out");
-					successLogOut();
+					successSignOut();
 				}
 
 				// update user details;
@@ -157,7 +157,7 @@ public class FacebookSignIn {
 			AccessToken old, AccessToken current) {
 
 				Utils.d("FB:AccessToken:Changed");
-				if (current == null) { successLogOut(); }
+				if (current == null) { successSignOut(); }
 				else {
 					accessToken = current;
 
@@ -375,13 +375,14 @@ public class FacebookSignIn {
 		});
 	}
 
-	protected void successLogin (FirebaseUser user) {
+	protected void successSignin (FirebaseUser user) {
 		Utils.d("FB:Login:Success");
 
 		isFacebookConnected = true;
 		accessToken = AccessToken.getCurrentAccessToken();
 
 		try {
+			currentFBUser.put("uid", user.getUid());
 			currentFBUser.put("name", user.getDisplayName());
 			currentFBUser.put("email_id", user.getEmail());
 			currentFBUser.put("photo_uri", user.getPhotoUrl());
@@ -395,7 +396,7 @@ public class FacebookSignIn {
 		Utils.callScriptFunc("Auth", "FacebookLogin", "true");
 	}
 
-	protected void successLogOut () {
+	protected void successSignOut () {
 		isFacebookConnected = false;
 
 		currentFBUser = null;

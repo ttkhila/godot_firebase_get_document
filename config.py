@@ -1,25 +1,14 @@
-#
-# Copyright 2017 FrogSquare. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
-#
 
+import sys
 import json
 import os
 import re
 import shutil
+
+from colors import *
+
+# Set your Android app ID
+p_app_id = "com.your.appid"
 
 # Update this to customize the module
 _config = {
@@ -28,22 +17,20 @@ _config = {
 "Invites"        : True,
 "RemoteConfig"   : True,
 "Notification"   : True,
-"Storage"        : True,
-"Firestore"      : True,
+"Storage"        : False,
+"Firestore"      : False,
 
-"Authentication" : True,
+"Authentication" : False,
 "AuthGoogle"     : True,
-"AuthFacebook"   : True,
-"AuthTwitter"    : True,
-"AuthAnonymous"  : True,
-"AuthEmailPassword": True
+"AuthFacebook"   : False,
+"AuthTwitter"    : False
 }
 
 FILES_LIST		= \
 {
 "AdMob"		: ["AdMob.java"],
 "Analytics"	: ["Analytics.java"],
-"Auth"		: ["Auth.java"],
+"Auth"		: ["AnonymousAuth.java", "Auth.java", "EmailAndPassword.java"],
 "Base"		: ["Config.java", "FireBase.java", "Utils.java", "AndroidPermissionsChunk.xml"],
 "Invites"	: ["Invites.java"],
 "Notification"	: ["MessagingService.java", "Notification.java", \
@@ -55,15 +42,14 @@ FILES_LIST		= \
 "AuthGoogle"    : ["GoogleSignIn.java"],
 "AuthFacebook"  : ["FacebookSignIn.java"],
 "AuthTwitter"   : ["TwitterSignIn.java"],
-"AuthAnonymous" : ["AnonymousSignIn.java"],
-"AuthEmailPassword" : ["EmailPasswordSignIn.java"]
 }
 
 directory = "android"
 empty_line = re.compile(r'^\s*$')
 
 def can_build(plat):
-    return update_module() if plat == "android" else False
+    return update_module() if plat == "android" else True
+    #return False
 
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
@@ -138,12 +124,15 @@ def update_module():
     _config["Auth"] = _config["Authentication"]
 
     if (_config["Storage"] or _config["Firestore"]) and not _config["Auth"]:
+        sys.stdout.write(RED)
         print("Storage/Firestore needs FireBase Authentication, Skipping `GodotFireBase` module")
+        sys.stdout.write(RESET)
+
         return False
 
     data_to_check = \
     ["Analytics", "AdMob", "Auth", "Invites", "Notification", "RemoteConfig",\
-    "Storage", "Firestore", "AuthFacebook", "AuthGoogle", "AuthTwitter", "AuthAnonymous", "AuthEmailPassword"]
+    "Storage", "Firestore", "AuthFacebook", "AuthGoogle", "AuthTwitter"]
 
     regex_list = []
 
@@ -153,14 +142,15 @@ def update_module():
         _config["AuthGoogle"] = False
         _config["AuthFacebook"] = False
         _config["AuthTwitter"] = False
-        _config["AuthEmailPassword"] = False
-        _config["AuthAnonymous"] = False
 
+    dbg_msg = ""
     for d in data_to_check:
         if not _config[d]:
             regex_list.append(\
             [re.compile(r'([\/]+'+d+'[\+]+)'), re.compile(r'([\/]+'+d+'[\-]+)')])
         else:
+            dbg_msg += " %s," % d
+
             if d != "Storage":
                 if d == "Auth":
                     if not os.path.exists(target_dir+"auth/"): os.makedirs(target_dir+"auth/")
@@ -169,6 +159,8 @@ def update_module():
                         shutil.copyfile(src_dir+"auth/"+files, target_dir+"auth/"+files)
                     else: shutil.copyfile(src_dir+files, target_dir+files)
             else: copytree(src_dir+d.lower(), target_dir+d.lower())
+
+    print(GREEN + "FireBase: " + RESET + "[" + dbg_msg[1:-1] + "]")
 
     # Copy FireBase.java file into memory
     parse_java_file(src_dir+"FireBase.java", target_dir+"FireBase.java", regex_list)
@@ -206,16 +198,18 @@ def configure(env):
         env.android_add_maven_repository(\
         "url 'https://oss.sonatype.org/content/repositories/snapshots'")
 
-        env.android_add_gradle_classpath("com.google.gms:google-services:3.1.1")
+        env.android_add_gradle_classpath("com.google.gms:google-services:4.1.0")
         env.android_add_gradle_plugin("com.google.gms.google-services")
 
         env.android_add_dependency("compile 'com.android.support:support-annotations:25.0.1'")
-        env.android_add_dependency("compile 'com.google.firebase:firebase-core:11.8.0'")
+        env.android_add_dependency("compile 'com.google.firebase:firebase-core:16.0.3'")
+        env.android_add_dependency("compile 'com.google.firebase:firebase-analytics:16.0.1'")
+        env.android_add_dependency("compile 'com.google.android.gms:play-services-measurement-base:16.0.0'")
 
         if _config["Auth"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-auth:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-auth:16.0.3'")
             if _config["AuthGoogle"]:
-                env.android_add_dependency("compile 'com.google.android.gms:play-services-auth:11.8.0'")
+                env.android_add_dependency("compile 'com.google.android.gms:play-services-auth:16.0.0'")
 
             if _config["AuthFacebook"]:
                 env.android_add_dependency("compile 'com.facebook.android:facebook-android-sdk:4.18.0'")
@@ -227,23 +221,23 @@ def configure(env):
                 "compile('com.twitter.sdk.android:twitter:1.13.1@aar') { transitive = true }")
 
         if _config["AdMob"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-ads:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-ads:15.0.1'")
 
         if _config["RemoteConfig"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-config:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-config:16.0.0'")
 
         if _config["Notification"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-messaging:11.8.0'")
-            env.android_add_dependency("compile 'com.firebase:firebase-jobdispatcher:0.5.2'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-messaging:17.3.0'")
+            env.android_add_dependency("compile 'com.firebase:firebase-jobdispatcher:0.8.5'")
 
         if _config["Invites"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-invites:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-invites:16.0.3'")
 
         if _config["Storage"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-storage:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-storage:16.0.1'")
 
         if _config["Firestore"]:
-            env.android_add_dependency("compile 'com.google.firebase:firebase-firestore:11.8.0'")
+            env.android_add_dependency("compile 'com.google.firebase:firebase-firestore:17.1.0'")
 
         env.android_add_dependency("compile 'commons-codec:commons-codec:1.10'")
 
@@ -252,4 +246,4 @@ def configure(env):
         env.android_add_to_manifest("android/AndroidManifestChunk.xml");
         env.android_add_to_permissions("android/AndroidPermissionsChunk.xml");
         env.android_add_default_config("minSdkVersion 15")
-        env.android_add_default_config("applicationId 'com.your.appid'")
+        env.android_add_default_config("applicationId '"+ p_app_id +"'")

@@ -14,10 +14,6 @@
  * limitations under the License.
  **/
 
-/**
- * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
- **/
-
 package org.godotengine.godot;
 
 import android.app.Activity;
@@ -40,15 +36,19 @@ public class NotifyInTime extends JobService {
 		Bundle bundle = job.getExtras();
 		Utils.d("Message: " + bundle.getString("message"));
 
-		MessagingService.sendNotification(bundle, this);
+        if (bundle.getString("type").equals("image")) {
+    		MessagingService.sendNotification(bundle, this);
+        } else {
+    		MessagingService.sendNotification(bundle.getString("message"), this);
+        }
 
-		return true; // Answers the question: "Is there still work going on?"
+		return false; // Answers the question: "Is there still work going on?"
 	}
 
 	@Override
 	public boolean onStopJob(JobParameters job) {
 		Utils.d("Job Stopped.");
 
-		return true; // Answers the question: "Should this job be retried?"
+		return false; // Answers the question: "Should this job be retried?"
 	}
 }

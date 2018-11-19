@@ -37,7 +37,7 @@ public class Auth {
 	public static final int GOOGLE_AUTH 	= 0x0003;
 	public static final int FACEBOOK_AUTH	= 0x0004;
 	public static final int TWITTER_AUTH	= 0x0005;
-	public static final int EMAIL_AUTH	    = 0x0006;
+	public static final int EMAIL_AUTH	= 0x0006;
 	public static final int ANONYMOUS_AUTH	= 0x0007;
 
 	public static Auth getInstance (Activity p_activity) {
@@ -77,21 +77,9 @@ public class Auth {
 			TwitterSignIn.getInstance(activity).init();
 		}
 		//AuthTwitter--
-        
-        //AuthAnonymous++
-        if (config.optBoolean("Anonymous", false)) {
-            AnonymousSignIn.getInstance(activity).init();
-        }
-        //AuthAnonymous--
-        
-        //AuthEmailPassword++
-        if (config.optBoolean("EmailPassword", false)) {
-            EmailPasswordSignIn.getInstance(activity).init();
-        }
-        //AuthEmailPassword++
 	}
 
-	public void sign_in (final int type_id, final String... args) {
+	public void sign_in (final int type_id) {
 		if (!isInitialized()) { return; }
 
 		Utils.d("Auth:SignIn:TAG:" + type_id);
@@ -111,28 +99,20 @@ public class Auth {
 			//AuthFacebook--
 			//AuthTwitter++
 			case TWITTER_AUTH:
-				Utils.d("Auth:Twitter:SignIn");
+				Utils.d("Auth twitter sign in");
 				TwitterSignIn.getInstance(activity).signIn();
 				break;
 			//AuthTwitter--
-            //AuthAnonymous++
 			case ANONYMOUS_AUTH:
 				Utils.d("Auth:Anonymous:SignIn");
-				AnonymousSignIn.getInstance(activity).signIn();
+				AnonymousAuth.getInstance(activity).signIn();
 				break;
-            //AuthAnonymous--
-            //AuthEmailPassword++ 
-            case EMAIL_AUTH:
-                Utils.d("Auth:EmailPassword:SignIn");
-                EmailPasswordSignIn.getInstance(activity).signIn(args[0], args[1]);
-                break;
-            //AuthEmailPassword--
 			default:
 				Utils.d("Auth:Type:NotAvailable");
 				break;
 		}
 	}
-    
+
 	public void sign_out (final int type_id) {
 		if (!isInitialized()) { return; }
 
@@ -153,35 +133,19 @@ public class Auth {
 			//AuthFacebook--
 			//AuthTwitter++
 			case TWITTER_AUTH:
-				Utils.d("Auth:Twitter:SignOut");
+				Utils.d("Auth twitter sign out");
 				TwitterSignIn.getInstance(activity).signOut();
 				break;
 			//AuthTwitter--
-			//AuthAnonymous++
 			case ANONYMOUS_AUTH:
 				Utils.d("Auth:Anonymous:SignOut");
-				AnonymousSignIn.getInstance(activity).signOut();
+				AnonymousAuth.getInstance(activity).signOut();
 				break;
-            //AuthAnonymous--
-            //AuthEmailPassword++
-            case EMAIL_AUTH:
-                Utils.d("Auth:Anonymous:SignOut");
-				EmailPasswordSignIn.getInstance(activity).signOut();
-				break;
-            //AuthEmailPassword--
 			default:
 				Utils.d("Auth:Type:NotAvailable.");
 				break;
 		}
 	}
-    
-    public void create_account (final int type_id, final String... args) {
-        if (!isInitialized()) { return; }
-        
-        Utils.d("Auth:CreateAccount:TAG:" + type_id);
-        
-        EmailPasswordSignIn.getInstance(activity).createAccount(args[0], args[1]);
-    }
 
 	public void revoke(final int type_id) {
 		if (!isInitialized()) { return; }
@@ -201,6 +165,9 @@ public class Auth {
 				FacebookSignIn.getInstance(activity).revokeAccess();
 				break;
 			//AuthFacebook--
+			case ANONYMOUS_AUTH:
+				Utils.d("FB:Revoke:Anonymous");
+				break;
 			default:
 				Utils.d("FB:Auth:Type:NotFound");
 		}
@@ -245,13 +212,6 @@ public class Auth {
 			return FacebookSignIn.getInstance(activity).getUserDetails();
 		}
 		//AuthFacebook--
-        
-        //AuthEmailPassword++
-		if (type_id == EMAIL_AUTH && EmailPasswordSignIn.getInstance(activity).isConnected()) {
-			Utils.d("Getting Email user details");
-			return EmailPasswordSignIn.getInstance(activity).getUserDetails();
-		}
-		//AuthEmailPassword--
 
 		return "NULL";
 	}
@@ -288,24 +248,17 @@ public class Auth {
 		switch (type_id) {
 			//AuthGoogle++
 			case GOOGLE_AUTH:
-				Utils.d("Auth:Status:Google");
+				Utils.d("Auth:Status:Google:True");
 				return GoogleSignIn.getInstance(activity).isConnected();
 			//AuthGoogle--
 			//AuthFacebook++
 			case FACEBOOK_AUTH:
-				Utils.d("Auth:Status:Facebook");
+				Utils.d("Auth:Status:Facebook:True");
 				return FacebookSignIn.getInstance(activity).isConnected();
 			//AuthFacebook--
-			//AuthAnonymous++
 			case ANONYMOUS_AUTH:
-				Utils.d("Auth:Status:Anonymous");
-				return AnonymousSignIn.getInstance(activity).isConnected();
-            //AuthAnonymous--
-            //AuthEmailPassword++
-            case EMAIL_AUTH:
-                Utils.d("Auth:Status:EmailPassword");
-				return EmailPasswordSignIn.getInstance(activity).isConnected();
-            //AuthEmailPassword--
+				Utils.d("Auth:Status:Anonymous:True");
+				return AnonymousAuth.getInstance(activity).isConnected();
 			default:
 				Utils.d("Auth:Type:NotAvailable");
 				break;
@@ -374,18 +327,6 @@ public class Auth {
 			TwitterSignIn.getInstance(activity).onStart();
 		}
 		//AuthTwitter--
-        
-        //AuthAnonymous++
-		if (config.optBoolean("Anonymous", false)) {
-			AnonymousSignIn.getInstance(activity).onStart();
-		}
-		//AuthAnonymous--
-        
-        //AuthEmailPassword++
-		if (config.optBoolean("EmailPassword", false)) {
-			EmailPasswordSignIn.getInstance(activity).onStart();
-		}
-		//AuthEmailPassword--
 
 	}
 
@@ -417,18 +358,6 @@ public class Auth {
 			TwitterSignIn.getInstance(activity).onStop();
 		}
 		//AuthTwitter--
-        
-        //AuthAnonymous++
-		if (config.optBoolean("Anonymous", false)) {
-			AnonymousSignIn.getInstance(activity).onStop();
-		}
-		//AuthAnonymous--
-        
-        //AuthEmailPassword++
-		if (config.optBoolean("EmailPassword", false)) {
-			EmailPasswordSignIn.getInstance(activity).onStop();
-		}
-		//AuthEmailPassword--
 	}
 
 	private static Activity activity = null;

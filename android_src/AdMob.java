@@ -14,10 +14,6 @@
  * limitations under the License.
  **/
 
-/**
- * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
- **/
-
 package org.godotengine.godot;
 
 import android.app.Activity;
@@ -92,8 +88,9 @@ public class AdMob {
 				ad_units.add(activity.getString(R.string.rewarded_video_ad_unit_id));
 			} else {
 				ad_units = Arrays.asList(ad_unit_id.split(","));
-				Utils.d("AdMob:RewardedVideo:" +
-				String.valueOf(ad_units.size()) +":UnitIdS:Found");
+
+				Utils.d("AdMob:RewardedVideo:" + String.valueOf(ad_units.size()) +":UnitIdS:Found");
+                Utils.d("AdMob:MultipleAdUnits:NotSupported_By_AdMob [AdMob SDK provided only single instance for rewarded_ads]");
 			}
 
 			for (String id : ad_units) {
@@ -107,6 +104,8 @@ public class AdMob {
 		mAdSize = new Dictionary();
 		mAdSize.put("width", 0);
 		mAdSize.put("height", 0);
+
+        onStart();
 	}
 
 	public Dictionary getBannerSize() {
@@ -135,6 +134,8 @@ public class AdMob {
 	}
 
 	public void createBanner(final String ad_unit_id) {
+        mAdViewLoaded = false;
+
 		FrameLayout layout = ((Godot)activity).layout; // Getting Godots framelayout
 		FrameLayout.LayoutParams AdParams = new FrameLayout.LayoutParams(
 							FrameLayout.LayoutParams.MATCH_PARENT,
@@ -142,14 +143,14 @@ public class AdMob {
 
 		if(mAdView != null) { layout.removeView(mAdView); }
 
-		if (AdMobConfig.optString("BannetGravity", "BOTTOM").equals("BOTTOM")) {
+		if (AdMobConfig.optString("BannerGravity", "BOTTOM").equals("BOTTOM")) {
 			AdParams.gravity = Gravity.BOTTOM;
 		} else { AdParams.gravity = Gravity.TOP; }
 
 		AdRequest.Builder adRequestB = new AdRequest.Builder();
 		adRequestB.tagForChildDirectedTreatment(true);
 
-		if (BuildConfig.DEBUG) {
+		if (BuildConfig.DEBUG || AdMobConfig.optBoolean("TestAds", false)) {
 			adRequestB.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
 			adRequestB.addTestDevice(Utils.getDeviceId(activity));
 		}
@@ -164,8 +165,9 @@ public class AdMob {
 		mAdView.setAdListener(new AdListener() {
 			@Override
 			public void onAdLoaded() {
-				Utils.d("AdMob:Banner:OnAdLoaded");	
+				Utils.d("AdMob:Banner:OnAdLoaded");
 				AdSize adSize = mAdView.getAdSize();
+                mAdViewLoaded = true;
 
 				mAdSize.put("width", adSize.getWidthInPixels(activity));
 				mAdSize.put("height", adSize.getHeightInPixels(activity));
@@ -223,9 +225,13 @@ public class AdMob {
 	}
 
 	public void emitRewardedVideoStatus(final String unitid) {
-		RewardedVideoAd mrv = reward_ads.get(unitid);
-		Utils.callScriptFunc("AdMob", "AdMob_Video",
-		buildStatus(unitid, mrv.isLoaded() ? "loaded" : "not_loaded"));
+        if (reward_ads.containsKey(unitid)) {
+    		RewardedVideoAd mrv = reward_ads.get(unitid);
+    		Utils.callScriptFunc("AdMob", "AdMob_Video",
+    		buildStatus(unitid, mrv.isLoaded() ? "loaded" : "not_loaded"));
+        } else {
+            Utils.d("AdMob:RewardedVideo:UnitId_NotConfigured");
+        }
 	}
 
 	public Dictionary buildStatus(String unitid, String status) {
@@ -248,9 +254,16 @@ public class AdMob {
 		RewardedVideoAd mrv = MobileAds.getRewardedVideoAdInstance(activity);
 		mrv.setRewardedVideoAdListener(new RewardedVideoAdListener() {
 
+            @Override
+            public void onRewardedVideoCompleted() {
+				Utils.callScriptFunc("AdMob", "RewardedVideoCompleted", new Dictionary());
+            }
+
 			@Override
 			public void onRewardedVideoAdLoaded() {
 				Utils.d("AdMob:Video:Loaded");
+                
+                mAdRewardLoaded = true;
 				Utils.callScriptFunc("AdMob", "AdMob_Video", buildStatus(unitid, "loaded"));
 			}
 
@@ -302,6 +315,23 @@ public class AdMob {
 		return mrv;
 	}
 
+    public boolean isBannerLoaded() {
+        return mAdViewLoaded;
+    }
+
+    public boolean isInterstitialLoaded() {
+        return mInterstitialAd.isLoaded();
+    }
+
+    public boolean isRewardedAdLoaded() {
+		if (!isInitialized() || reward_ads.size() <= 0) {
+            return false;
+        }
+
+		RewardedVideoAd mrv = (RewardedVideoAd) reward_ads.values().toArray()[0];
+        return mrv.isLoaded();
+    }
+
 	public void requestRewardedVideoStatus() {
 		emitRewardedVideoStatus();
 	}
@@ -312,6 +342,10 @@ public class AdMob {
 
 	public void show_rewarded_video(final String id) {
 		if (!isInitialized() || reward_ads.size() <= 0) { return; }
+        if (reward_ads.isEmpty() || !reward_ads.containsKey(id)) {
+            Utils.d("AdMob:RewardedVideo:ID_NotConfigured");
+            return;
+        }
 
 		RewardedVideoAd mrv = (RewardedVideoAd) reward_ads.get(id);
 
@@ -321,6 +355,10 @@ public class AdMob {
 
 	public void show_rewarded_video() {
 		if (!isInitialized() || reward_ads.size() <= 0) { return; }
+        if (reward_ads.isEmpty()) {
+            Utils.d("AdMob:RewardedVideo:NotConfigured[ reward_ads instance is empty ]");
+            return;
+        }
 
 		RewardedVideoAd mrv = (RewardedVideoAd) reward_ads.values().toArray()[0];
 
@@ -357,16 +395,31 @@ public class AdMob {
 		else { Utils.d("AdMob:Interstitial:NotLoaded"); }
 	}
 
-	private void reloadRewardedVideo(final String unitid) {
-		RewardedVideoAd mrv = reward_ads.get(unitid);
-		requestNewRewardedVideo(mrv, unitid);
+	public void reloadRewardedVideo(final String unitid) {
+        if (reward_ads.containsKey(unitid) && reload_count <= 3) {
+            Utils.d("AdMob:RewardedVideo:Reloading_RewardedVideo_Request");
+
+    		RewardedVideoAd mrv = reward_ads.get(unitid);
+    		requestNewRewardedVideo(mrv, unitid);
+
+            reload_count += 1;
+        } else {
+            Utils.d("AdMob:RewardedVideo:Creating_New_RewardedVideo_Request");
+
+    	    RewardedVideoAd mrv = createRewardedVideo(unitid);
+    		requestNewRewardedVideo(mrv, unitid);
+
+	    	reward_ads.put(unitid, mrv);
+        }
 	}
 
 	private void requestNewRewardedVideo(RewardedVideoAd mrv, String unitid) {
-		Utils.d("AdMob:Loading:RewardedAd:For: "+unitid);
+		Utils.d("AdMob:Loading:RewardedAd:For: " + unitid);
+
+        mAdRewardLoaded = false;
 		AdRequest.Builder adRB = new AdRequest.Builder();
 
-		if (BuildConfig.DEBUG) {
+		if (BuildConfig.DEBUG || AdMobConfig.optBoolean("TestAds", false)) {
 			adRB.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
 			adRB.addTestDevice(Utils.getDeviceId(activity));
 		}
@@ -377,7 +430,7 @@ public class AdMob {
 	private void requestNewInterstitial() {
 		AdRequest.Builder adRB = new AdRequest.Builder();
 
-		if (BuildConfig.DEBUG) {
+		if (BuildConfig.DEBUG || AdMobConfig.optBoolean("TestAds", false)) {
 			adRB.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
 			adRB.addTestDevice(Utils.getDeviceId(activity));
 		}
@@ -397,7 +450,7 @@ public class AdMob {
 	}
 
 	public void onStart() {
-
+        reload_count = 0;
 	}
 
 	public void onPause() {
@@ -421,6 +474,8 @@ public class AdMob {
 	}
 
 	public void onStop() {
+        reload_count = 0;
+
 		if (mAdView != null) { mAdView.destroy(); }
 
 		if (reward_ads != null) {
@@ -430,9 +485,13 @@ public class AdMob {
 		}
 	}
 
+    private int reload_count = 0;
+
 	private static Activity activity = null;
 	private static AdMob mInstance = null;
 
+    private boolean mAdRewardLoaded = false;
+    private boolean mAdViewLoaded = false;
 	private Map<String, RewardedVideoAd> reward_ads = null;
 
 	private AdView mAdView = null;

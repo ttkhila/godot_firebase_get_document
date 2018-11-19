@@ -14,15 +14,6 @@
  * limitations under the License.
  **/
 
-/**
- * Modified by Daniel Ciolfi <daniel.ciolfi@gmail.com>
- **/
-
-/**
- * Modified by Estevão Rocha <estevao.bom@gmail.com>
- * 2018/10/29 
- **/
-
 package org.godotengine.godot;
 
 import android.app.Activity;
@@ -60,10 +51,10 @@ public class FireBase extends Godot.SingletonBase {
 
 	public FireBase(Activity p_activity) {
 		registerClass ("FireBase", new String[] {
-			"init", "initWithFile", "alert",
+			"init", "initWithFile", "alert", "set_debug",
 
 			//Analytics++
-			"setScreenName", "sendAchievement", "sendCustom", "join_group", "level_up",
+			"setScreenName", "sendAchievement", "send_custom", "send_events", "join_group", "level_up",
 			"post_score", "content_select", "earn_currency",
 			"spend_currency", "tutorial_begin", "tutorial_complete",
 			//Analytics--
@@ -71,7 +62,8 @@ public class FireBase extends Godot.SingletonBase {
 			//AdMob++
 			"show_banner_ad", "show_interstitial_ad", "show_rewarded_video",
 			"request_rewarded_video_status", "set_banner_unitid", "show_rvideo",
-			"request_rewarded_video_status_of", "get_banner_size",
+			"request_rewarded_video_status_of", "get_banner_size", "is_banner_loaded",
+            "is_interstitial_loaded", "is_rewarded_video_loaded",
 			//AdMob--
 
 			//Auth++
@@ -92,20 +84,13 @@ public class FireBase extends Godot.SingletonBase {
 			"twitter_sign_in", "twitter_sign_out", "is_twitter_connected",
 			//AuthTwitter--
 
-            //AuthAnonymous++
 			"anonymous_sign_in", "anonymous_sign_out", "is_anonymous_connected",
 			"authConfig",
-            //AuthAnonymous--
-            
-            //AuthEmailPassword++
-            "email_create_account", "email_sign_in", "email_sign_out", "is_email_connected", "get_email_user",
-            //AuthEmailPassword--
-            
 			//Auth--
 
 			//Notification++
 			"notifyInMins", "notifyInSecs", "subscribeToTopic", "getToken",
-			"notifyOnComplete",
+			"notifyOnComplete", "repeatNotification",
 			//Notification--
 
 			//Invites++
@@ -121,7 +106,7 @@ public class FireBase extends Godot.SingletonBase {
 			//Storage--
 
 			//Firestore++
-			"load_document", "set_document", "add_document", "set_listener", "remove_listener", "get_document"
+			"load_document", "load_document_to", "set_document", "add_document"
 			//Firestore--
 		});
 
@@ -207,6 +192,10 @@ public class FireBase extends Godot.SingletonBase {
 
 		Utils.d("FireBase initialized.");
 	}
+
+    public void set_debug(final boolean p_value) {
+        Config.DEBUG = p_value;
+    }
 
 	public void alertMsg(String message) {
 		alertMsg("FireBase", message);
@@ -364,6 +353,19 @@ public class FireBase extends Godot.SingletonBase {
 	//Analytics--
 
 	//AdMob++
+    public boolean is_banner_loaded() {
+        return AdMob.getInstance(activity).isBannerLoaded();
+    }
+
+    public boolean is_interstitial_loaded () {
+        return AdMob.getInstance(activity).isInterstitialLoaded();
+
+    }
+
+    public boolean is_rewarded_video_loaded() {
+        return AdMob.getInstance(activity).isRewardedAdLoaded();
+    }
+
 	public void set_banner_unitid(final String unit_id) {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
@@ -391,6 +393,14 @@ public class FireBase extends Godot.SingletonBase {
 			}
 		});
 	}
+
+    public void reload_rewarded_video(final String unit_id) {
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				AdMob.getInstance(activity).reloadRewardedVideo(unit_id);
+			}
+		});
+    }
 
 	public void show_rvideo(final String unit_id) {
 		activity.runOnUiThread(new Runnable() {
@@ -558,7 +568,6 @@ public class FireBase extends Godot.SingletonBase {
 	}
 	//AuthFacebook--
 
-    //AuthAnonymous++
 	public void anonymous_sign_in() {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
@@ -578,42 +587,6 @@ public class FireBase extends Godot.SingletonBase {
 	public boolean is_anonymous_connected() {
 		return Auth.getInstance(activity).isConnected(Auth.ANONYMOUS_AUTH);
 	}
-    //AuthAnonymous--
-    
-    //AuthEmailPassword++
-    public void email_create_account(final String email, final String password) {
-        activity.runOnUiThread(new Runnable() {
-           public void run() {
-               Auth.getInstance(activity).create_account(Auth.EMAIL_AUTH, new String[]{email, password});
-           } 
-        });
-    }
-    
-    public void email_sign_in(final String email, final String password) {
-        activity.runOnUiThread(new Runnable() {
-           public void run() {
-               Auth.getInstance(activity).sign_in(Auth.EMAIL_AUTH, new String[]{email, password});
-           } 
-        });
-    }
-    
-    public void email_sign_out() {
-        activity.runOnUiThread(new Runnable() {
-           public void run() {
-               Auth.getInstance(activity).sign_out(Auth.EMAIL_AUTH);
-           } 
-        });
-    }
-    
-    public boolean is_email_connected() {
-		return Auth.getInstance(activity).isConnected(Auth.EMAIL_AUTH);
-	}
-    
-    public String get_email_user() {
-		return Auth.getInstance(activity).getUserDetails(Auth.EMAIL_AUTH);
-	}
-    //AuthEmailPasswors--
-    
 	//Auth--
 
 	/** Extra **/
@@ -632,10 +605,18 @@ public class FireBase extends Godot.SingletonBase {
 	/** Extra **/
 
 	//Notification++
-	public void notifyOnComplete(final Dictionary data) {
+    public void repeatNotification(final Dictionary data, final int seconds) {
+    	activity.runOnUiThread(new Runnable() {
+			public void run() {
+				Notification.getInstance(activity).shedule(data, seconds);
+			}
+		});
+    }
+    
+	public void notifyOnComplete(final Dictionary data, final int seconds) {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
-				Notification.getInstance(activity).notifyOnComplete(data);
+				Notification.getInstance(activity).notifyOnComplete(data, seconds);
 			}
 		});
 	}
@@ -773,35 +754,18 @@ public class FireBase extends Godot.SingletonBase {
 	public void load_document(final String p_name) {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
-				Firestore.getInstance(activity).loadDocuments(p_name);
+				Firestore.getInstance(activity).loadDocuments(p_name, -1);
 			}
 		});
 	}
 
-    public void set_listener(final String p_col_name, final String p_doc_name) {
-        activity.runOnUiThread(new Runnable() {
-			public void run() {
-				Firestore.getInstance(activity).setListener(p_col_name, p_doc_name);
-			}
-		});
-    }
-    
-    public void remove_listener(final String p_col_name, final String p_doc_name) {
-        activity.runOnUiThread(new Runnable() {
-			public void run() {
-				Firestore.getInstance(activity).removeListener(p_col_name, p_doc_name);
-			}
-		});
-    }
-
-    public void get_document(final String p_name, final String p_doc_name) {
+	public void load_document_to(final String p_name, final int callback_instance_id) {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
-				Firestore.getInstance(activity).getDocument(p_name, p_doc_name);
+				Firestore.getInstance(activity).loadDocuments(p_name, callback_instance_id);
 			}
 		});
 	}
-    
 	//Firestore--
 
 	/** Main Funcs **/
@@ -810,6 +774,8 @@ public class FireBase extends Godot.SingletonBase {
 	}
 
 	protected void onMainActivityResult (int requestCode, int resultCode, Intent data) {
+		//Utils.d("onActivityResult: reqCode=" + requestCode + ", resCode=" + resultCode);
+
 		//Analytics++
 		// Analytics.getInstance(activity).onActivityResult(requestCode, resultCode, data);
 		//Analytics--

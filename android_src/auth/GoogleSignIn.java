@@ -176,6 +176,7 @@ public class GoogleSignIn
 		isRequestingSignIn = false;
 
 		try {
+			currentGoogleUser.put("uid", user.getUid());
 			currentGoogleUser.put("name", user.getDisplayName());
 			currentGoogleUser.put("email_id", user.getEmail());
 			currentGoogleUser.put("photo_uri", user.getPhotoUrl());
@@ -303,9 +304,9 @@ public class GoogleSignIn
 	private JSONObject currentGoogleUser = new JSONObject();
 
 	private Boolean isRequestingSignIn = false;
-    private Boolean isIntentInProgress = false;
-    private Boolean isGooglePlayConnected = false;
-    private Boolean isResolvingConnectionFailure = false;
+        private Boolean isIntentInProgress = false;
+        private Boolean isGooglePlayConnected = false;
+        private Boolean isResolvingConnectionFailure = false;
 
 	private static GoogleApiClient mGoogleApiClient = null;
 }
