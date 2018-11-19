@@ -100,17 +100,18 @@ public class Firestore {
 					JSONObject jobject = new JSONObject();
 
 					try {
+
 						for (DocumentSnapshot document : task.getResult()) {
-							jobject.put(
-							document.getId(), document.getData());
+							jobject.put(document.getId(), new JSONObject(document.getData()));
 						}
 
 						Utils.d("Data: " + jobject.toString());
-						Utils.callScriptFunc(
-						"Firestore", "Documents", jobject.toString());
+			    		Utils.callScriptFunc(
+                                "Firestore", "Documents", jobject.toString());
 					} catch (JSONException e) {
 						Utils.d("JSON Exception: " + e.toString());
 					}
+
 				} else {
 					Utils.w("Error getting documents: " + task.getException());
 				}
@@ -133,7 +134,7 @@ public class Firestore {
 						Utils.callScriptFunc("Firestore", "QueryDocument", new JSONObject(document.getData()).toString());
 					} else {
 						Utils.d("No such document");
-						Utils.callScriptFunc("Firestore", "SnapshotData", "");
+						Utils.callScriptFunc("Firestore", "QueryDocument", "");
 					}	
 		
 				} else {
@@ -153,13 +154,13 @@ public class Firestore {
 			@Override
 			public void onSuccess(DocumentReference documentReference) {
 				Utils.d("DocumentSnapshot added with ID: " + documentReference.getId());
-				Utils.callScriptFunc("Firestore", "DocumentAdded", true);
+				Utils.callScriptFunc("Firestore", "DocumentAdded", documentReference.getId().toString());
 			}
 		}).addOnFailureListener(new OnFailureListener() {
 			@Override
 			public void onFailure(@NonNull Exception e) {
 				Utils.w("Error adding document: " + e);
-				Utils.callScriptFunc("Firestore", "DocumentAdded", false);
+				Utils.callScriptFunc("Firestore", "DocumentAdded", null);
 			}
 		});
 	}
